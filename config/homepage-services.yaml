@@ -1,0 +1,32 @@
+# Homepage /app/config/services.yaml
+# Tiles use the Tailscale MagicDNS name so they work at home AND away (Tailscale on).
+# The Pi-hole widget uses the LOCAL IP because Homepage -> Pi-hole is a same-box call.
+# Replace PI_MAGICDNS_NAME, PI_LOCAL_IP, and PIHOLE_APP_PASSWORD with your own values.
+
+- Network:
+    - Pi-hole:
+        href: http://PI_MAGICDNS_NAME/admin
+        description: DNS ad/tracker blocking
+        icon: pi-hole.png
+        widget:
+          type: pihole
+          url: http://PI_LOCAL_IP
+          version: 6
+          key: PIHOLE_APP_PASSWORD   # generate in Pi-hole > Settings > Web interface/API
+
+    - Uptime Kuma:
+        href: http://PI_MAGICDNS_NAME:3001
+        description: Service monitoring
+        icon: uptime-kuma.png
+
+- Files & Storage:
+    - File Browser:
+        href: http://PI_MAGICDNS_NAME:8080
+        description: Personal file server
+        icon: filebrowser.png
+
+- Notifications:
+    - ntfy:
+        href: http://PI_MAGICDNS_NAME:8181
+        description: Self-hosted alerts
+        icon: ntfy.png

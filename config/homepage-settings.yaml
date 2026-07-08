@@ -1,0 +1,5 @@
+# Homepage /app/config/settings.yaml
+title: My Homelab
+theme: dark
+color: slate
+headerStyle: boxed

@@ -1,0 +1,16 @@
+# Never commit secrets or live data
+*.log
+*.db
+*password*
+*secret*
+*.key
+*.pem
+id_ed25519*
+authorized_keys
+known_hosts
+# Live configs that may contain real values (commit only sanitized copies in config/)
+/etc/
+settings.json
+# OS / editor junk
+.DS_Store
+*.swp
