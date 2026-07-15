@@ -53,35 +53,63 @@ The Pi can now always resolve DNS regardless of Tailscale, Pi-hole/Unbound, or r
 ## Incident 2 — WAN link failure (physical layer)
 
 ### Symptoms
-- One router's network (the Pi's) had no internet; a different router on a separate path worked fine.
-- Intermittent before going fully dead.
+- Intermittent whole-network flakiness: "works, then suddenly stops."
+- Eventually the router's network lost internet entirely.
+- A second router on a separate path kept working throughout.
 
 ### Diagnosis (Pi used as a probe)
-- `ping <router>` → 0% loss (Pi ↔ router perfect; router itself fine)
-- `ping 8.8.8.8` → **66% loss** initially (degraded), then **100%** after cables were disturbed
+The Pi is wired to the router, so it's an ideal probe — it removes Wi‑Fi from the equation entirely.
+
+- `ping <router>` → **0% loss** (Pi ↔ router perfect; the router itself is fine)
+- `ping 8.8.8.8` → **66% loss** initially, later **100%**
 - Router's **"Internet" indicator light was OFF** → no upstream WAN link at all.
 
-Because the *other* router (different path) worked, this was isolated to **this router's uplink**, not an ISP/upstream outage.
+Because the *other* router (different path) worked fine, this was isolated to **this router's uplink** — not an ISP/upstream outage. The "does the other network work?" question is what separated a local fault from a shared upstream one.
 
 ### Root cause
-A **failing/loose physical WAN connection**. The 66% packet loss *before anything was touched* proved the uplink cable/connector was already degrading. Reseating/replacing cables during troubleshooting temporarily worsened it (66% → 100%) before a solid cable + firm reseat restored a clean link.
+A **failing physical WAN cable**. The 66% packet loss *before anything was touched* is the key evidence — the uplink was already degrading on its own. This wasn't caused by the troubleshooting.
 
-### Fix
-Replaced the WAN cable and reseated the upstream end firmly → "Internet" light came on solid → `ping 8.8.8.8` returned **0% loss**.
+### Fix (and the mistake worth documenting)
+Swapping in a **spare cable of unknown quality** made things *worse*, not better — 66% loss became 100% dead. That sent the diagnosis sideways for a while, because it looked like the problem had escalated when really one bad cable had just been traded for another.
 
-### Outcome / watch-list
-Connection is clean now (0% loss, better than the pre-incident 66%). If flakiness recurs on this router specifically, suspect, in order: the WAN cable quality, the router's WAN port, or the aging router hardware itself.
+Fitting a **brand-new cable** resolved it completely.
+
+**Lesson:** when chasing a flaky physical link, test with a **known-good new cable**, not spares from the drawer. Otherwise you're swapping one suspect for another and can't trust the result.
+
+### Outcome
+Verified with a long-run test rather than a short one:
+
+```
+20,089 packets transmitted, 20,000 received, ~0.44% packet loss
+```
+
+~0.4% ICMP loss over ~20k packets across several hours is normal background noise (routers deprioritise ping), not a fault. Prior to the fix the same test showed 66% loss. Complaints stopped.
+
+**Watch-list:** if flakiness returns, suspect in order — the cable/connector again, the router's WAN port, then the aging router hardware itself.
 
 ---
 
-## Diagnostic method that worked both times
+## Bonus: ruling out a suspected cause properly
 
-1. **Isolate the scope** — "does the *other* network work?" instantly separated *upstream/ISP* problems (Incident 1) from *local single-router* problems (Incident 2).
-2. **Use the Pi as a probe** — `ping <router>` vs `ping 8.8.8.8` pinpoints whether the break is LAN-side or WAN-side.
-3. **Read the physical indicators** — the router's Internet light gave a definitive WAN-link status.
-4. **Attach a monitor when the network is the very thing that's broken** — never rely solely on SSH to fix a networking/DNS failure.
+The Pi was suspected of causing the household flakiness, so it was removed as a controlled experiment:
+
+- **Pi off, 1–2 days** → no complaints
+- **Pi back on**, long-run ping clean (~0.4% loss) → **still no complaints**
+
+Conclusion: the Pi was **not** the cause — the timing had merely overlapped with the cable replacement. Worth noting that "it got better when I removed X" is not proof; the variable has to be added back and observed. Doing so here exonerated the Pi and confirmed the cable as the real fault.
+
+---
+
+## Diagnostic method that worked
+
+1. **Isolate the scope** — "does the *other* network work?" instantly separates *upstream/ISP* problems (Incident 1) from *local single-router* problems (Incident 2).
+2. **Use a wired host as a probe** — `ping <router>` vs `ping 8.8.8.8` pinpoints whether the break is LAN-side or WAN-side, with Wi‑Fi taken out of the picture.
+3. **Read the physical indicators** — the router's Internet light gave definitive WAN-link status.
+4. **Test long, not short** — a 10-second ping showing 0% proves nothing about an intermittent fault. Thousands of packets over hours do.
+5. **Attach a monitor when the network is the thing that's broken** — never rely solely on SSH to fix a networking/DNS failure.
+6. **Change one variable at a time, with known-good parts** — and add a removed variable back before concluding it was the cause.
 
 ## Resilience improvements adopted
 - Pi no longer depends on Tailscale for its own DNS (`--accept-dns=false`).
 - Pi has a public DNS fallback (`1.1.1.1`) after its own resolver.
-- Reinforced the case for the still-outstanding **SD-card / config backup** (today was recoverable; SD corruption would not have been).
+- Reinforced the case for the still-outstanding **SD-card / config backup** (both incidents were recoverable; SD corruption would not have been).
